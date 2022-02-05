@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Kozlov D.V. Test</string>
+    <string name="last_post">Последние</string>
+    <string name="best_post">Лучшие</string>
+    <string name="hot_post">Горячие</string>
+    <string name="random_post">Случайный</string>
 </resources>

@@ -9,4 +9,5 @@ object Constants {
     const val CATEGORY_BEST = "Best"
     const val CATEGORY_HOT = "Hot"
     const val DEBAG_TAG = "Debag Tag "
+    const val POST_COUNT = 5
 }

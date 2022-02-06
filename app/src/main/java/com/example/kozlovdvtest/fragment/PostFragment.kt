@@ -13,8 +13,10 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.example.kozlovdvtest.Constants
+import com.example.kozlovdvtest.Constants.POST_COUNT
 import com.example.kozlovdvtest.R
 import com.example.kozlovdvtest.databinding.FragmentLastPostBinding
+import com.example.kozlovdvtest.fillNullsToIndex
 import com.example.kozlovdvtest.retrofit.DataFromDevLife
 import com.example.kozlovdvtest.retrofit.JsonData
 import com.example.kozlovdvtest.retrofit.RetrofitService
@@ -26,12 +28,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class PostFragment : Fragment(), CoroutineScope by MainScope() {
     lateinit var bindingLastPostFragment: FragmentLastPostBinding
-    private var jsonList = mutableListOf<JsonData>()
-    private var descriptionsList: MutableList<String?> = mutableListOf()
-    private var imageURLList: MutableList<String?> = mutableListOf()
-    private var gifURLList: MutableList<String?> = mutableListOf()
+    private var jsonList = mutableListOf<JsonData?>()
     private var index = 0
-    private var sideIndex = 0
 
     private val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(Constants.BASE_URL)
@@ -58,6 +56,9 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
     }
 
     private fun renderState() {
+
+        val item = jsonList.getOrNull(index)
+
         if (index > 0) {
             bindingLastPostFragment.btnPreviousPost.visibility = View.VISIBLE
         } else {
@@ -65,10 +66,10 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
         }
 
         bindingLastPostFragment.txtPage.text = getString(R.string.post_text, index + 1)
-        bindingLastPostFragment.txtOnImage.text = descriptionsList.getOrNull(index)
+        bindingLastPostFragment.txtOnImage.text = item?.description
 
-        val gifUrl = gifURLList.getOrNull(index)
-        val imageUrl = imageURLList.getOrNull(index)
+        val gifUrl = item?.gifURL
+        val imageUrl = item?.previewURL
         when {
             gifUrl != null -> load(gifUrl, true)
             imageUrl != null -> load(imageUrl, false)
@@ -123,32 +124,12 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
             }
         }
 
-    private fun previousPost() {
-        changeIndex(false)
-        renderState()
-        getPageIndex()
-    }
-
     private fun changeIndex(isNext: Boolean) {
         when (isNext) {
-            true -> {
-                index++
-                sideIndex++
-                if (sideIndex == 5) {
-                    sideIndex = 0
-                }
-            }
-            false -> {
-                index--
-                sideIndex--
-                if (sideIndex == -1) {
-                    sideIndex = 4
-                }
-            }
+            true -> index++
+            false -> index--
         }
-
         Log.d(Constants.DEBAG_TAG, "index: $index")
-        Log.d(Constants.DEBAG_TAG, "sideIndex: $sideIndex")
     }
 
     private fun onLoading() {
@@ -157,25 +138,15 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
         bindingLastPostFragment.mainImageView.isVisible = false
     }
 
-    private fun getPageIndex(): String {
-        val pageIndex = index / 4
-        Log.d(Constants.DEBAG_TAG, "${Constants.POST_PAGE}: $pageIndex")
-        return "$pageIndex"
-    }
+    private fun getPageIndex(): String = (index / POST_COUNT).toString()
 
-    private fun addInList(listOfJson: MutableList<JsonData>) {
-        val gifURL = listOfJson[sideIndex].gifURL
-        val description = listOfJson[sideIndex].description
-        val previewURL = listOfJson[sideIndex].previewURL
-        if (index == descriptionsList.size) {
-            descriptionsList.add(description)
-            imageURLList.add(previewURL)
-            gifURLList.add(gifURL)
-            Log.d(Constants.DEBAG_TAG, "Data add in list")
+    private fun previousPost() {
+        launch {
+            changeIndex(false)
+            loadPost()
         }
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
     private fun nextPost() {
         launch {
             changeIndex(true)
@@ -209,22 +180,20 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
     }
 
     private suspend fun load(onLoad: suspend () -> Response<DataFromDevLife>) {
+        Log.d(Constants.DEBAG_TAG, "${Constants.POST_PAGE}: $index")
         try {
-
-            if (sideIndex == 0) {
-
+            if (jsonList.getOrNull(index) == null) {
+                Log.d(Constants.DEBAG_TAG, "NOT LOADED. LOAD AT PAGE INDEX ${getPageIndex()}")
                 val onResponse = withContext(Dispatchers.IO) {
                     onLoad.invoke()
                 }.body()
-                jsonList = onResponse?.result?.toMutableList()!!
-
-                addInList(jsonList)
+                jsonList.fillNullsToIndex(index)
+                // index / POST_COUNT round down value
+                jsonList.addAll((index / POST_COUNT) * POST_COUNT, onResponse?.result ?: listOf())
 
                 renderState()
             } else {
-
-                addInList(jsonList)
-
+                Log.d(Constants.DEBAG_TAG, "ALREADY LOADED. RENDER")
                 renderState()
             }
 

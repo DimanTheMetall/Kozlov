@@ -13,7 +13,7 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.example.kozlovdvtest.Constants
-import com.example.kozlovdvtest.Constants.POST_COUNT
+import com.example.kozlovdvtest.Constants.DEFAULT_POST_COUNT
 import com.example.kozlovdvtest.R
 import com.example.kozlovdvtest.databinding.FragmentLastPostBinding
 import com.example.kozlovdvtest.fillNullsToIndex
@@ -30,6 +30,8 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
     lateinit var bindingLastPostFragment: FragmentLastPostBinding
     private var jsonList = mutableListOf<JsonData?>()
     private var index = 0
+
+    private var postCount = DEFAULT_POST_COUNT
 
     private val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(Constants.BASE_URL)
@@ -65,15 +67,25 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
             bindingLastPostFragment.btnPreviousPost.visibility = View.INVISIBLE
         }
 
-        bindingLastPostFragment.txtPage.text = getString(R.string.post_text, index + 1)
-        bindingLastPostFragment.txtOnImage.text = item?.description
+        if (item == null) {
+            bindingLastPostFragment.progressCircular.isVisible = false
+            bindingLastPostFragment.txtError.isVisible = true
+            bindingLastPostFragment.mainImageView.isVisible = false
+        } else {
+            bindingLastPostFragment.progressCircular.isVisible = false
+            bindingLastPostFragment.txtError.isVisible = false
+            bindingLastPostFragment.mainImageView.isVisible = true
 
-        val gifUrl = item?.gifURL
-        val imageUrl = item?.previewURL
-        when {
-            gifUrl != null -> load(gifUrl, true)
-            imageUrl != null -> load(imageUrl, false)
+            bindingLastPostFragment.txtPage.text = getString(R.string.post_text, index + 1)
+            bindingLastPostFragment.txtOnImage.text = item.description
+            val gifUrl = item.gifURL
+            val imageUrl = item.previewURL
+            when {
+                gifUrl.isNotEmpty() -> load(gifUrl, true)
+                imageUrl.isNotEmpty() -> load(imageUrl, false)
+            }
         }
+
     }
 
     private fun load(url: String, isGif: Boolean) {
@@ -138,7 +150,7 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
         bindingLastPostFragment.mainImageView.isVisible = false
     }
 
-    private fun getPageIndex(): String = (index / POST_COUNT).toString()
+    private fun getPageIndex(): String = (index / postCount).toString()
 
     private fun previousPost() {
         launch {
@@ -187,9 +199,14 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
                 val onResponse = withContext(Dispatchers.IO) {
                     onLoad.invoke()
                 }.body()
+
+                if (postCount != DEFAULT_POST_COUNT) {
+                    postCount = onResponse?.result?.size ?: DEFAULT_POST_COUNT
+                }
+
                 jsonList.fillNullsToIndex(index)
                 // index / POST_COUNT round down value
-                jsonList.addAll((index / POST_COUNT) * POST_COUNT, onResponse?.result ?: listOf())
+                jsonList.addAll((index / postCount) * postCount, onResponse?.result ?: listOf())
 
                 renderState()
             } else {

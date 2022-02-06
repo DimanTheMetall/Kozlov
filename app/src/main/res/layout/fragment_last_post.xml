@@ -100,12 +100,10 @@
             android:layout_height="50dp"
             android:layout_marginBottom="30dp"
             android:backgroundTint="@color/red_250"
-            android:visibility="invisible"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/txt_page"
             app:layout_constraintStart_toStartOf="parent"
             app:srcCompat="@android:drawable/ic_menu_revert"
-            tools:visibility="visible"
             android:tint="@color/black" />
 
         <androidx.appcompat.widget.AppCompatTextView

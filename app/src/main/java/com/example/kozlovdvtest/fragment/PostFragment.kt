@@ -1,10 +1,12 @@
 package com.example.kozlovdvtest.fragment
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
@@ -62,9 +64,13 @@ class PostFragment : Fragment(), CoroutineScope by MainScope() {
         val item = jsonList.getOrNull(index)
 
         if (index > 0) {
-            bindingLastPostFragment.btnPreviousPost.visibility = View.VISIBLE
+            bindingLastPostFragment.btnPreviousPost.backgroundTintList =
+                ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.red_250))
+            bindingLastPostFragment.btnPreviousPost.isEnabled = true
         } else {
-            bindingLastPostFragment.btnPreviousPost.visibility = View.INVISIBLE
+            bindingLastPostFragment.btnPreviousPost.backgroundTintList =
+                ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.black_250))
+            bindingLastPostFragment.btnPreviousPost.isEnabled = false
         }
 
         if (item == null) {

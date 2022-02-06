@@ -18,23 +18,20 @@ import com.example.kozlovdvtest.databinding.FragmentLastPostBinding
 import com.example.kozlovdvtest.retrofit.DataFromDevLife
 import com.example.kozlovdvtest.retrofit.JsonData
 import com.example.kozlovdvtest.retrofit.RetrofitService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 
-class PostFragment : Fragment() {
+class PostFragment : Fragment(), CoroutineScope by MainScope() {
     lateinit var bindingLastPostFragment: FragmentLastPostBinding
     private var jsonList = mutableListOf<JsonData>()
     private var descriptionsList: MutableList<String?> = mutableListOf()
     private var imageURLList: MutableList<String?> = mutableListOf()
     private var gifURLList: MutableList<String?> = mutableListOf()
-    private var index = -1
-    private var sideIndex = -1
+    private var index = 0
+    private var sideIndex = 0
 
     private val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(Constants.BASE_URL)
@@ -50,7 +47,9 @@ class PostFragment : Fragment() {
     ): View {
         bindingLastPostFragment = FragmentLastPostBinding.inflate(inflater, container, false)
 
-        nextPost()
+        launch {
+            loadPost()
+        }
 
         bindingLastPostFragment.btnNextPost.setOnClickListener { nextPost() }
         bindingLastPostFragment.btnPreviousPost.setOnClickListener { previousPost() }
@@ -178,28 +177,32 @@ class PostFragment : Fragment() {
 
     @Suppress("BlockingMethodInNonBlockingContext")
     private fun nextPost() {
+        launch {
+            changeIndex(true)
+            loadPost()
+        }
+    }
 
-        CoroutineScope(Dispatchers.Main).launch {
+    @Suppress("BlockingMethodInNonBlockingContext")
+    private suspend fun loadPost() {
+        val postCategory = requireArguments().getString(Constants.CATEGORY_KEY)
 
-            val postCategory = requireArguments().getString(Constants.CATEGORY_KEY)
+        onLoading()
 
-            onLoading()
-
-            when (postCategory) {
-                Constants.CATEGORY_LATEST -> {
-                    load {
-                        retrofitService.getLatestPost(getPageIndex()).execute()
-                    }
+        when (postCategory) {
+            Constants.CATEGORY_LATEST -> {
+                load {
+                    retrofitService.getLatestPost(getPageIndex()).execute()
                 }
-                Constants.CATEGORY_BEST -> {
-                    load {
-                        retrofitService.getBestPost(getPageIndex()).execute()
-                    }
+            }
+            Constants.CATEGORY_BEST -> {
+                load {
+                    retrofitService.getBestPost(getPageIndex()).execute()
                 }
-                Constants.CATEGORY_HOT -> {
-                    load {
-                        retrofitService.getHotPost(getPageIndex()).execute()
-                    }
+            }
+            Constants.CATEGORY_HOT -> {
+                load {
+                    retrofitService.getHotPost(getPageIndex()).execute()
                 }
             }
         }
@@ -207,7 +210,7 @@ class PostFragment : Fragment() {
 
     private suspend fun load(onLoad: suspend () -> Response<DataFromDevLife>) {
         try {
-            changeIndex(true)
+
             if (sideIndex == 0) {
 
                 val onResponse = withContext(Dispatchers.IO) {
@@ -227,11 +230,10 @@ class PostFragment : Fragment() {
 
         } catch (e: Exception) {
             e.printStackTrace()
+            renderState()
             bindingLastPostFragment.progressCircular.isVisible = false
             bindingLastPostFragment.txtError.isVisible = true
             bindingLastPostFragment.mainImageView.isVisible = false
-
-            renderState()
         }
     }
 
